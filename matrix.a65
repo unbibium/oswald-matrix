@@ -1,12 +1,12 @@
   processor 6502 
 
-; This is supposed to generate a Matrix code rain effect.
+; This is supposed to generate a Matrix code rain effect
+; with a large sprite array in the foreground.
 ;
-; It is designed to run its own loop.  For example, if it
-; ends up at $C000, then you run it for 500 iterations
-; with this command:
-;    SYS 49152,500
-; 
+; It is designed to be controlled from BASIC with parameters.
+; for example, to run 500 iterations with sprite 2:
+; SYS 49152,500,2
+;
 ; the arcane method of performing the row multiplication is
 ; left over from a version that supported the VIC-20.
 
@@ -18,6 +18,7 @@ HEIGHT = 25
 PAGES = 4
 COLMEM = $D800
 SCRMEM = $A000
+SPRPTR = SCRMEM + $03F8
 
 ; BASIC routines to get SYS parameter
 CHKCOM = $AEFD
@@ -25,14 +26,40 @@ GETNUM = $AD8A
 TOINT = $B7F7   ; Convert FAC#1 to Integer in LINNUM
 ; result of SYS parameter
 LINNUM = $14
+GETBYT = $B79E
+SPRNUM = $12
+
+; root of sprite data for
+SPRPTR = SCRMEM + $03F8
+SPRITEROOT = (SPRITEDATA & $3FC0) >> 6
+
+  MAC NEXTRASTER
+  LDA #{2}  ; scanline number
+  STA $D012
+  LDA # <{1}
+  STA $0314
+  LDA # >{1}
+  STA $0315
+  ENDM
+
 
 MATRIX_INIT:
     echo "MATRIX = SYS", [.]d
 
-; hello
+; get iteration count from BASIC command
     JSR CHKCOM
     JSR GETNUM
     JSR TOINT
+    JSR CHKCOM
+    JSR GETBYT
+    TXA
+    EOR #$FF  ; start counting from end of memory
+    ASL
+    ASL
+    ASL
+    ASL
+    STA SPRNUM
+    STA $0400
     
 
 INIT:
@@ -68,15 +95,38 @@ pLLOOP
   STA $D000,X
   DEX
   BPL pLLOOP
+
+; initialize sprite pointers
+.INITSPRPTR
+  LDY #7
+  LDA #SPRITEROOT
+  CLC
+.LOOPS1
+  STA SPRPTR,Y
+  ADC #1
+  DEY
+  BPL .LOOPS1
+
+
+; set up raster interrupts
+  SEI
+  LDA #$7F ; off all interrupte
+  STA $DC0D ; CIA-1
+  AND $D011
+  STA $D011
+  NEXTRASTER RASTERBLK,210
+  LDA #1   ; enable raster interrupt signals
+  STA $D01A
+  CLI
+
 ; main loop
 LOOP
     ldy #WIDTH-1
 LOOP1:
     lda raindrops,y ;get raindrop position
     ; reset if >64
-    bmi LOOPA
     cmp #HEIGHT+numcolors
-    bmi LOOPA
+    bcc LOOPA
     ; get random number -16 <= n <= -1
     jsr GETRAND
     ora #$F0
@@ -85,16 +135,20 @@ LOOPA:
     jsr MULROW
     ; see if (mscr),y falls within screen boundary
     ldx mscr+1
-    tya
-    clc
-    adc mscr
-    bcc LOOPB
-    inx
 LOOPB:
-    cpx #>SCRMEM
-    bmi DRAWTRAIL ; lower bound check
-    cpx #>SCRMEM+PAGES
-    bpl DRAWTRAIL
+    ; lower bound check
+    cpx #>SCRMEM  
+    bmi DRAWTRAIL 
+    ; upper bound check
+    cpx #>SCRMEM+PAGES-1
+    bne .LOOPBC
+.WHATCOMP
+    ; we also need to guard the end of the last page
+    ; because now that's where sprites are
+    ldx mscr
+    cpx #232 ; beginning of row 26
+.LOOPBC
+    bcs DRAWTRAIL ; upper bound check
     jsr GETRAND
     sta (mscr),y
 DRAWTRAIL:
@@ -108,9 +162,9 @@ TRAILLOOP:
     lda #0
     adc mcolor+1
     cmp #>COLMEM
-    bmi NEXTTRAIL
+    bcc NEXTTRAIL
     cmp #>COLMEM+PAGES
-    bpl NEXTTRAIL
+    bcs NEXTTRAIL
     lda COLORS,x
     sta (mcolor),y
 NEXTTRAIL:
@@ -217,6 +271,67 @@ GETRAND2:
     lda ROMRAND
     rts
 
+
+; macro to toggle bytes
+; usage: TOGGLE offset,ypos
+;   offset is the amount to add to the base SPRNUM
+;   ypos is the Y position for this row of sprites
+    MAC TOGGLE
+
+.PTROFFSET = ({1} & 7) + SPRPTR
+.YREGS = ({1} & 7) * 2 + $d001
+
+    LDX #3
+    LDY #6
+.RLOOP
+    TXA
+    ADC SPRNUM
+  IF {1} > 0
+    ADC #{1}
+  ENDIF
+    STA .PTROFFSET,X
+    LDA #{2}
+    STA .YREGS,Y
+    DEX
+    DEY
+    DEY
+    BPL .RLOOP
+    ENDM
+;
+; BIG RASTER THING
+;
+
+; at this scanline, toggle sprite pointers
+ echo "RASTERMID", .
+; While second row is being drawn, update third row
+RASTERMID
+    CLC
+    TOGGLE 8,SPRY1+84
+    NEXTRASTER RASTERBOT,160
+    ASL $D019
+    JMP $EA81
+
+ echo "RASTERBOT", .
+; While third row is being drawn, update fourth row
+RASTERBOT
+    CLC
+    TOGGLE 12,SPRY1+126
+    NEXTRASTER RASTERBLK,210
+    ASL $D019
+    JMP $EA81
+
+; At bottom of screen, return first and second
+; row to original positions
+RASTERBLK
+    CLC
+    TOGGLE 0,SPRY1
+    TOGGLE 4,SPRY1+42
+    NEXTRASTER RASTERMID,120
+    ASL $D019
+    JMP $EA31 ; run actual keyboard buffer
+
+    
+
 RANDPTR = GETRAND2+1
 
 COLORS:
@@ -260,11 +375,4 @@ SPRPOS:
 .HIGHX SET .HIGHX + $44
     ENDIF
     byte .HIGHX
-
-; make math easy by calculating some exclusive ORs
-; for the y-position
-.YTOGGLE equ (SPRY1) ^ (SPRY1 + 84)
-    echo SPRY1, "xor", .YTOGGLE, "=", SPRY1+84
-; and the memory pointer
-;TODO
 
