@@ -149,6 +149,8 @@ REALEND:
     LDA #21
     STA $D018
   ENDIF
+  LDA #0
+  STA $D015 ; disable all sprites
 
     rts
 
@@ -239,8 +241,8 @@ raindrops:
     ENDIF
 
 ; calculate all sprite positions in advance
-SPRX1 = 120
-SPRY1 = 60
+SPRX1 = 88
+SPRY1 = 62
 SPRPOS:
     byte SPRX1     ,SPRY1
     byte SPRX1+48  ,SPRY1
