@@ -199,7 +199,7 @@ LOOP2
     inc raindrops,x
     dey
     bpl LOOP1
-ENDUT: 
+; parse end conditions
       LDA 198 ; check keyboard
       BNE REALEND ; abort if key pressed
 ; decrement LINNUM until zero
@@ -220,6 +220,11 @@ REALEND:
     LDA #21
     STA $D018
   ENDIF
+  SEI
+   ;restore interrupts to what they are in BASIC
+    jsr $FDA3
+  CLI
+
   LDA #0
   STA $D015 ; disable all sprites
    ; TODO: restore screen and remove interrupts
