@@ -13,6 +13,8 @@
 mscr = $FB
 mcolor = $FD
 
+SPRITECOLOR = 0
+BGCOLOR = 11
 WIDTH = 40
 HEIGHT = 25
 PAGES = 4
@@ -64,7 +66,11 @@ MATRIX_INIT:
 
 INIT:
 ; turn screen black
-    lda #0
+    lda #11 ;dk grey
+    sta 646 ;text color
+    lda #147 ;clear screen
+    jsr $FFD2 ; chrout
+    lda #BGCOLOR
     sta $d020
     sta $d021
 ; adjust screen memory if necessary
@@ -78,7 +84,7 @@ INIT:
   ENDIF
 ; activate sprites
   LDX #7
-  LDA #2 ; sprite color
+  LDA #SPRITECOLOR
 BLLOOP
   STA $D027,X
   DEX
@@ -167,6 +173,15 @@ TRAILLOOP:
     bcs NEXTTRAIL
     lda COLORS,x
     sta (mcolor),y
+    bne NEXTTRAIL
+    ; clean up with space if it's black
+    lda mcolor
+    sta mscr
+    lda mcolor+1
+    eor #>(SCRMEM^COLMEM)
+    sta mscr+1
+    lda #32
+    sta (mscr),y
 NEXTTRAIL:
     lda mcolor
     sec
@@ -185,6 +200,8 @@ LOOP2
     dey
     bpl LOOP1
 ENDUT: 
+      LDA 198 ; check keyboard
+      BNE REALEND ; abort if key pressed
 ; decrement LINNUM until zero
       LDA LINNUM
       BNE LABEL
@@ -314,7 +331,7 @@ RASTERMID
 RASTERBOT
     CLC
     TOGGLE 12,SPRY1+126
-    NEXTRASTER RASTERBLK,210
+    NEXTRASTER RASTERBLK,240
     ASL $D019
     JMP $EA81
 
@@ -333,7 +350,7 @@ RASTERBLK
 RANDPTR = GETRAND2+1
 
 COLORS:
-    byte 0,5,0,5,5,13,5,13,13,1
+    byte 0,11,5,5,11,5,5,5,13,13,13,5,13,13,13,1
 ENDCOLORS
 
 numcolors = ENDCOLORS-COLORS
