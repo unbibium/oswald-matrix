@@ -4,7 +4,7 @@ C1541=c1541
 all: main.prg
 
 main.prg: main.a65 matrix.a65 headliner.a65 images.bin
-	$(DASM) main.a65 -omain.prg
+	$(DASM) main.a65 -omain.prg -smain.sym
 
 images.bin: make-bitmaps.py
 	./make-bitmaps.py
