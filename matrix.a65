@@ -302,7 +302,6 @@ GETRAND2:
 ;
 
 ; at this scanline, toggle sprite pointers
- echo "RASTERMID", .
 ; While second row is being drawn, update third row
 RASTERMID
     CLC
@@ -311,7 +310,6 @@ RASTERMID
     ASL $D019
     JMP $EA81
 
- echo "RASTERBOT", .
 ; While third row is being drawn, update fourth row
 RASTERBOT
     CLC

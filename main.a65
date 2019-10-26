@@ -2,9 +2,9 @@
 
  org $b400
 SPRITEDATA equ .
+ echo "start of data =", .
  incbin images.bin
  echo "end of data =", .
-
  org $c000
 
  include matrix.a65
