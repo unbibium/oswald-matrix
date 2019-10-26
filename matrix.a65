@@ -62,6 +62,12 @@ BLLOOP
   LDX #0
   STX $D01B ; behind it
   STX $D01C ; turn off multicolor
+  LDX #16
+pLLOOP
+  LDA SPRPOS,X ; position
+  STA $D000,X
+  DEX
+  BPL pLLOOP
 ; main loop
 LOOP
     ldy #WIDTH-1
@@ -232,8 +238,9 @@ raindrops:
     ENDIF
     ENDIF
 
-SPRX1 = 40
-SPRY1 = 40
+; calculate all sprite positions in advance
+SPRX1 = 120
+SPRY1 = 60
 SPRPOS:
     byte SPRX1     ,SPRY1
     byte SPRX1+48  ,SPRY1
@@ -243,5 +250,19 @@ SPRPOS:
     byte SPRX1+48  ,SPRY1+42
     byte SPRX1+96  ,SPRY1+42
     byte SPRX1+144 ,SPRY1+42
-    byte $00
+.HIGHX SET 0
+    IF SPRX1+144 > 255
+.HIGHX SET .HIGHX + $88
+    ENDIF
+    IF SPRX1+96 > 255
+.HIGHX SET .HIGHX + $44
+    ENDIF
+    byte .HIGHX
+
+; make math easy by calculating some exclusive ORs
+; for the y-position
+.YTOGGLE equ (SPRY1) ^ (SPRY1 + 84)
+    echo SPRY1, "xor", .YTOGGLE, "=", SPRY1+84
+; and the memory pointer
+;TODO
 
