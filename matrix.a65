@@ -92,8 +92,8 @@ BLLOOP
   STX $D015 ; enable all sprites
   STX $D01D ; expand height
   STX $D017 ; expand width
+  STX $D01B ; sprite-text priority
   LDX #0
-  STX $D01B ; behind it
   STX $D01C ; turn off multicolor
   LDX #16
 pLLOOP
@@ -222,6 +222,9 @@ REALEND:
   ENDIF
   LDA #0
   STA $D015 ; disable all sprites
+   ; TODO: restore screen and remove interrupts
+   LDA #1
+   STA 646; white text for ready prompt
 
     rts
 

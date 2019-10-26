@@ -1,12 +1,12 @@
 DASM=dasm
-PBMS=oswald1.pbm oswald2.pbm oswald3.pbm
+PBMS=oswald1.pbm oswald2.pbm oswald3.pbm oswald4.pbm
 
 all: main.prg
 
 main.prg: main.a65 matrix.a65 headliner.a65 images.bin
 	$(DASM) main.a65 -omain.prg -smain.sym
 
-images.bin: make-bitmaps.py
+images.bin: make-bitmaps.py $(PBMS)
 	./make-bitmaps.py ${PBMS}
 
 clean:

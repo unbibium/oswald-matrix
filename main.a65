@@ -1,6 +1,6 @@
  PROCESSOR 6502
 
- org $b400
+ org $b000
 SPRITEDATA equ .
  echo "start of data =", .
  incbin images.bin
