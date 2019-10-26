@@ -1,0 +1,247 @@
+  processor 6502 
+
+; This is supposed to generate a Matrix code rain effect.
+;
+; It is designed to run its own loop.  For example, if it
+; ends up at $C000, then you run it for 500 iterations
+; with this command:
+;    SYS 49152,500
+; 
+; the arcane method of performing the row multiplication is
+; left over from a version that supported the VIC-20.
+
+mscr = $FB
+mcolor = $FD
+
+WIDTH = 40
+HEIGHT = 25
+PAGES = 4
+COLMEM = $D800
+SCRMEM = $A000
+
+; BASIC routines to get SYS parameter
+CHKCOM = $AEFD
+GETNUM = $AD8A 
+TOINT = $B7F7   ; Convert FAC#1 to Integer in LINNUM
+; result of SYS parameter
+LINNUM = $14
+
+MATRIX_INIT:
+    echo "MATRIX = SYS", [.]d
+
+; hello
+    JSR CHKCOM
+    JSR GETNUM
+    JSR TOINT
+    
+
+INIT:
+; turn screen black
+    lda #0
+    sta $d020
+    sta $d021
+; adjust screen memory if necessary
+  IF SCRMEM > $3FFF
+    LDA #(>SCRMEM ^ $C0) >> 6 | 148
+    STA $DD00
+  ENDIF
+  if (SCRMEM & $3FFF) != $0400
+    LDA #((>SCRMEM << 2) & $F0) |  5
+    STA $D018
+  ENDIF
+; activate sprites
+  LDX #7
+  LDA #2 ; sprite color
+BLLOOP
+  STA $D027,X
+  DEX
+  BPL BLLOOP
+  STX $D015 ; enable all sprites
+  STX $D01D ; expand height
+  STX $D017 ; expand width
+  LDX #0
+  STX $D01B ; behind it
+  STX $D01C ; turn off multicolor
+; main loop
+LOOP
+    ldy #WIDTH-1
+LOOP1:
+    lda raindrops,y ;get raindrop position
+    ; reset if >64
+    bmi LOOPA
+    cmp #HEIGHT+numcolors
+    bmi LOOPA
+    ; get random number -16 <= n <= -1
+    jsr GETRAND
+    ora #$F0
+    sta raindrops,y
+LOOPA:
+    jsr MULROW
+    ; see if (mscr),y falls within screen boundary
+    ldx mscr+1
+    tya
+    clc
+    adc mscr
+    bcc LOOPB
+    inx
+LOOPB:
+    cpx #>SCRMEM
+    bmi DRAWTRAIL ; lower bound check
+    cpx #>SCRMEM+PAGES
+    bpl DRAWTRAIL
+    jsr GETRAND
+    sta (mscr),y
+DRAWTRAIL:
+    ; draw color trail
+    ldx #numcolors-1 ; color index
+TRAILLOOP:
+    ; see if (mcolor),y falls within screen boundary
+    tya
+    clc
+    adc mcolor
+    lda #0
+    adc mcolor+1
+    cmp #>COLMEM
+    bmi NEXTTRAIL
+    cmp #>COLMEM+PAGES
+    bpl NEXTTRAIL
+    lda COLORS,x
+    sta (mcolor),y
+NEXTTRAIL:
+    lda mcolor
+    sec
+    sbc #WIDTH
+    sta mcolor
+    bcs NEXTTRAIL2
+    dec mcolor+1
+NEXTTRAIL2:
+    dex
+    bpl TRAILLOOP
+    
+LOOP2
+    tya
+    tax
+    inc raindrops,x
+    dey
+    bpl LOOP1
+ENDUT: 
+; decrement LINNUM until zero
+      LDA LINNUM
+      BNE LABEL
+      LDA LINNUM+1
+      BEQ REALEND 
+      DEC LINNUM+1
+LABEL DEC LINNUM
+      JMP LOOP
+REALEND:
+; restore old screen
+ IF SCRMEM > $3FFF
+    LDA #151
+    STA $DD00
+ ENDIF
+  if (SCRMEM & $3FFF) != $0400
+    LDA #21
+    STA $D018
+  ENDIF
+
+    rts
+
+;
+; Multiply a row number by WIDTH
+;
+MULROW:
+        ; store value to be multiplied into
+        ; low byte temporarily.
+        sta mscr
+        ldx #0
+        stx mscr+1
+        ; use a loop to build the appropriate
+	; multiplication routine
+MASKBIT SET $80 ; will cover each bit
+TRAILING SET 1  ; trailing zeroes flag, will clear on
+                ; first 1 bit found.
+        ; loop through each bit
+        REPEAT 8
+        IF MASKBIT <= WIDTH ; skip if trailing 0
+        IF TRAILING
+        ; found leftmost '1' bit.
+TRAILING SET 0 ; no longer need to skip trailing 0s
+	; we can start shifting more bits from the right
+        ELSE ; multiply by two
+        asl
+        rol mscr+1
+        IF WIDTH & MASKBIT ; push a 1
+        adc mscr
+        bcc .+4
+        inc mscr+1
+        ENDIF ; whether to push a 1
+        ENDIF ; whether we're flipping the trailing bit
+        ENDIF ; whether we're in a trailing zero
+
+MASKBIT SET MASKBIT >> 1
+
+        REPEND
+    ; write low byte
+    sta mscr
+    sta mcolor
+    ; add high byte for screen memory
+    lda mscr+1
+    clc
+    adc #>SCRMEM
+    sta mscr+1
+    ; add high byte for color memory
+    adc #>COLMEM->SCRMEM
+    sta mcolor+1
+    rts
+
+; use ROM as a substitute for random bytes
+
+ROMRAND = $e000
+
+GETRAND:
+    inc RANDPTR
+    bne GETRAND2
+    inc RANDPTR+1
+    bne GETRAND2
+    lda #>ROMRAND
+    sta RANDPTR+1
+GETRAND2:
+    lda ROMRAND
+    rts
+
+RANDPTR = GETRAND2+1
+
+COLORS:
+    byte 0,5,0,5,5,13,5,13,13,1
+ENDCOLORS
+
+numcolors = ENDCOLORS-COLORS
+
+; TODO: randomize in assembler?
+; Memory for raindrop's vertical positions
+; one raindrop for each column on the screen
+raindrops: 
+    byte 3,9,13,7,10,8,4,16
+    byte 2,19,3,0,12,10,9,4
+    byte 3,9,12,5,13,1
+    IF WIDTH > 22
+    byte 4,16,2,19,3
+    IF WIDTH > 27
+    byte 1,12,10,9,4
+    byte 3,19,14,8,10,1,4,6
+    ENDIF
+    ENDIF
+
+SPRX1 = 40
+SPRY1 = 40
+SPRPOS:
+    byte SPRX1     ,SPRY1
+    byte SPRX1+48  ,SPRY1
+    byte SPRX1+96  ,SPRY1
+    byte SPRX1+144 ,SPRY1
+    byte SPRX1     ,SPRY1+42
+    byte SPRX1+48  ,SPRY1+42
+    byte SPRX1+96  ,SPRY1+42
+    byte SPRX1+144 ,SPRY1+42
+    byte $00
+

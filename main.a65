@@ -1,0 +1,13 @@
+ PROCESSOR 6502
+
+ org $c000
+
+ include matrix.a65
+ include headliner.a65
+ echo "end of code =", .
+
+ org $c400
+ incbin images.bin
+
+ echo "end of data =", .
+
