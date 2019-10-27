@@ -4,6 +4,8 @@
 
 import sys
 
+from readpbm import readpbm
+
 # hex digits for debugging
 digits = list(map(bytes,[
         (0x3C,0x66,0x6E,0x76,0x66,0x66,0x3c,0x00),
@@ -60,20 +62,13 @@ def segment(pbmdata,segx,segy,width):
 
 
 def pbmtosprite(fn):
-    with open(fn,'rb') as f:
-        magicnum = (f.read(3))
-        if magicnum != b'P4\n':
-            raise ValueError(fn+" does not appear to be a pbm file")
-        resolution = f.readline().decode("us-ascii").strip()
-        w,h = map(int,resolution.split(' ',1))
-        if w != 96 or h != 84:
-            raise ValueError("wrong resolution: " + resolution)
-        b = f.read(1008)
-        sprites = []
-        for y in range(int(h/21)):
-            for x in range(int(w/24)):
-                sprites.append(segment(b,x,y,w))
-        return b''.join(sprites)
+    b = readpbm(fn)
+    sprites = []
+    h,w=84,96
+    for y in range(int(h/21)):
+        for x in range(int(w/24)):
+            sprites.append(segment(b,x,y,w))
+    return b''.join(sprites)
 
         
 
@@ -87,7 +82,7 @@ if len(sys.argv) == 1:
     scriptname = sys.argv[0]
     print("Usage: %s [filenames]  convert pbm files to sprites" % scriptname)
     print("       %s -d           create debug sprites" % scriptname)
-elif len(sys.argv) == 2 and argv[1] == '-d':
+elif len(sys.argv) == 2 and sys.argv[1] == '-d':
     with open("images.bin",'wb') as f:
         for i in range(48):
             f.write(sprite(i))
