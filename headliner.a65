@@ -11,6 +11,9 @@
 ;    the OS variables instead of outputting control codes.
 ;  * Can print against the right edge of the screen without
 ;    breaking up the character.
+;  * Can pass parameters through SYS command.
+;    warning, there are no bounds checks
+;        SYS 50000,10,"HI" will print "HI" at x=10
 ; 
 
     processor 6502
@@ -42,6 +45,67 @@ CHAR       = $FA
 
 ; default origin.
 
+CHKCOM = $AEFD
+FRMEVL = $AD9E
+TXTPTR = $99
+FRESTR = $B6A3
+STRING = $69
+TEMPY = STRING+2
+
+HLBASIC:
+        echo "HLBASIC = SYS", [.]d, ",X,A$"
+        JSR CHKCOM
+        JSR GETBYT
+        STX XPOS
+        JSR CHKCOM
+        JSR FRMEVL
+        JSR FRESTR
+        ; todo: get integer
+        stx STRING
+        sty STRING+1
+        STA TEMPY
+       
+.HLLOOP:
+        ldy #0
+        LDA (STRING),y
+        ; convert petscii to screen code
+        cmp #33
+        bcc .SKIPPRINT
+        cmp #64
+        bcc .ANUMBER
+        eor #$40
+.ANUMBER
+        sta CHAR
+        jsr HEADLINER
+        dec TEMPY
+        beq .HLBEND
+        ; move cursor up and increment xpos
+        ldx #4
+uploop:
+        inc XPOS
+        lda #$91  ;CURSOR-UP
+        
+        jsr .CHROUT
+        dex
+        bne uploop
+.INCS:  ; increment string ptr
+        INC STRING
+        BNE .HLLOOP
+        INC STRING+1
+        BNE .HLLOOP
+.SKIPPRINT ; move to next character without crsr-up
+        lda XPOS
+        clc
+        adc #4
+        sta XPOS
+        dec TEMPY
+        bne .INCS
+.HLBEND:
+        lda #0
+        sta XPOS
+        RTS
+
+; original screen headliner routine
 HEADLINER:
 	echo "HEADLINER = SYS", [.]d
             LDA $D018  ; get displayed font from VIC

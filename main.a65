@@ -8,6 +8,7 @@ SPRITEDATA equ .
  org $c000
 
  include matrix.a65
+ org 50000
  include headliner.a65
  echo "end of code =", .
 

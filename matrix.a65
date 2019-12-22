@@ -220,14 +220,18 @@ REALEND:
     LDA #21
     STA $D018
   ENDIF
-  SEI
-   ;restore interrupts to what they are in BASIC
-    jsr $FDA3
-  CLI
 
   LDA #0
   STA $D015 ; disable all sprites
+  STA $D012 ; disable raster interrupt?
    ; TODO: restore screen and remove interrupts
+  SEI
+   ;restore interrupts to what they are in BASIC
+    ;jsr $FDA3 ; initialize I/O deviced
+    ;JSR $FD50
+    JSR $FD15 ; restore I/O vectors incl interrupts
+    JSR $FF5B
+  CLI
    LDA #1
    STA 646; white text for ready prompt
 
