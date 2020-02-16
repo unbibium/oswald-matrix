@@ -10,6 +10,8 @@ when you build it, load it into x64 and type something like
 the second number is the number of iterations before it quits
 the third number is the picture number (0 through 3)
 
-when you exit, all the interrupts are still running, and this causes 
-some instability
+You can display large text on the screen, up to 10 characters, like this:
 
+`SYS 50000,"HEADLINE",4`
+
+the number at the end is the starting X position of the cursor.
