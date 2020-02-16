@@ -21,6 +21,8 @@ SPRITEDATA equ $2000
 ; this causes matrix.a65 to leave out the part that
 ; allows us to put parameters into the SYS command.
 NOBASIC equ 1
+; don't clear at start
+NOCLEAR equ 1
 
  org $0801
 .code
@@ -37,25 +39,8 @@ NOBASIC equ 1
         .byte 0
 BASICEND: .byte 0,0
 
-CURRPIC .byte 0
-
-BEGIN:   
-
-    DEC CURRPIC
-    BPL DUH
-    LDA #MAXPIC
-    STA CURRPIC
-DUH:
-    LDA #<ITERATIONS
-    STA $14
-    LDA #>ITERATIONS
-    STA $15
-    LDX CURRPIC
-    JSR MATRIX_MAIN
-    LDA #0
-    STA 198  ; clear keyboard buffer
-    JMP BEGIN
-
+BEGIN:
+    include mlloop.a65
     ; the actual matrix rain code
     include matrix.a65
     echo "end of code:", .

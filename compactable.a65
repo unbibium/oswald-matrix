@@ -1,0 +1,22 @@
+; This is the main source file for a stand-alone traditional
+; demo that has no BASIC cruft at all, so that it can be run
+; through a compactor program.
+;
+; see sysprg.a65 for more comments
+
+ processor 6502
+
+SCRMEM equ $0400
+SPRITEDATA equ $2000
+
+NOBASIC equ 1
+NOCLEAR equ 1
+
+    org SPRITEDATA
+    incbin images.bin
+    include mlloop.a65
+    ; the actual matrix rain code
+    include matrix.a65
+    echo "end of code:", .
+
+

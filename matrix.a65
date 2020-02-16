@@ -117,8 +117,10 @@ MATRIX_MAIN:
     sta 646 ;text color
     sta $d021 ; for some kernels
     sta $d020
+  IFNCONST NOCLEAR
     lda #147 ;clear screen
     jsr $FFD2 ; chrout
+  ENDIF
 ; adjust screen memory if necessary
   IF SCRMEM > $3FFF
     LDA #(>SCRMEM ^ $C0) >> 6 | 148
@@ -257,6 +259,8 @@ LOOP2
 LABEL DEC LINNUM
       JMP LOOP
 REALEND:
+
+ IFNCONST NOCLEAR
 ; restore old screen
  IF SCRMEM > $3FFF
     LDA #151
@@ -266,8 +270,9 @@ REALEND:
     LDA #21
     STA $D018
   ENDIF
+ ENDIF
 
-    rts
+    RTS
 
 ;
 ; Multiply a row number by WIDTH

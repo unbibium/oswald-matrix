@@ -1,0 +1,34 @@
+;
+; This is a quick ML routine that loops
+; through all the pics
+;
+
+ processor 6502
+
+; constants
+; number of frames of animation to generate
+ITERATIONS equ 999
+; maximum pic number
+MAXPIC equ 3
+
+CURRPIC equ $20 ; some random point in BASIC zp
+
+JMPHERE:   
+    echo " SYS", [.]d
+    echo " JMP", ., "  $01=$37"
+
+    DEC CURRPIC
+    BPL DUH
+    LDA #MAXPIC
+    STA CURRPIC
+DUH:
+    LDA #<ITERATIONS
+    STA $14
+    LDA #>ITERATIONS
+    STA $15
+    LDX CURRPIC
+    JSR MATRIX_MAIN
+    LDA #0
+    STA 198  ; clear keyboard buffer
+    BEQ JMPHERE
+
