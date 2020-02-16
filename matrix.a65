@@ -45,8 +45,9 @@ SPRITEROOT = (SPRITEDATA & $3FC0) >> 6
   ENDM
 
 
+; Matrix rain entry point from BASIC
 MATRIX_INIT:
-    echo "MATRIX = SYS", [.]d
+    echo "MATRIX = SYS", [.]d, ",I,P"
 
 ; get iteration count from BASIC command
     JSR CHKCOM
@@ -62,12 +63,25 @@ MATRIX_INIT:
     ASL
     STA SPRNUM
     STA $0400
-    
+    JSR MATRIX_MAIN
 
-INIT:
+    LDA #0
+    STA $D015 ; disable all sprites
+    STA $D012 ; disable raster interrupt?
+    ;  restore screen and remove interrupts
+    SEI
+    JSR $FD15 ; restore I/O vectors incl interrupts
+    JSR $FF5B ; ???
+    CLI
+    LDA #1
+    STA 646; white text for ready prompt
+    RTS
+
+MATRIX_MAIN:
 ; turn screen black
     lda #11 ;dk grey
     sta 646 ;text color
+    sta $d021 ; for some kernels
     lda #147 ;clear screen
     jsr $FFD2 ; chrout
     lda #BGCOLOR
@@ -220,20 +234,6 @@ REALEND:
     LDA #21
     STA $D018
   ENDIF
-
-  LDA #0
-  STA $D015 ; disable all sprites
-  STA $D012 ; disable raster interrupt?
-   ; TODO: restore screen and remove interrupts
-  SEI
-   ;restore interrupts to what they are in BASIC
-    ;jsr $FDA3 ; initialize I/O deviced
-    ;JSR $FD50
-    JSR $FD15 ; restore I/O vectors incl interrupts
-    JSR $FF5B
-  CLI
-   LDA #1
-   STA 646; white text for ready prompt
 
     rts
 
