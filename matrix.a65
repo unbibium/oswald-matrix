@@ -82,15 +82,7 @@ MATRIX_INIT:
     JSR GETNUM  ; get numeric expression after comma
     JSR TOINT   ; convert it to an integer in LINNUM
     JSR CHKCOM  ; get comma after first arg
-    JSR GETBYT  ; get numeric expression in byte form in X
-    TXA
-    CLC
-    ADC #(SPRITEDATA & $3C00) >> 10
-    ASL
-    ASL
-    ASL
-    ASL
-    STA SPRNUM
+    JSR GETBYT  ; get numeric expression in byte form in X register
     JSR MATRIX_MAIN
 
     LDA #0
@@ -110,6 +102,16 @@ MATRIX_INIT:
 ;
 ;
 MATRIX_MAIN:
+; convert X to sprite pointer VIC will understand
+    TXA
+    CLC
+    ASL
+    ASL
+    ASL
+    ASL
+    ADC #SPRITEROOT
+    STA SPRNUM
+
 ; turn screen black
     lda #BGCOLOR
     sta 646 ;text color

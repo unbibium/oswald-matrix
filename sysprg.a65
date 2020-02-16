@@ -46,23 +46,14 @@ BEGIN:
     LDA #MAXPIC
     STA CURRPIC
 DUH:
-    LDA CURRPIC
-    ; TODO: the math to integrate SPRITEDATA
-    ; into the parameter should be in matrix.a65
-    CLC
-    ADC #(SPRITEDATA & $3C00) >> 10
-    ASL
-    ASL
-    ASL
-    ASL
-    STA $12
     LDA #<ITERATIONS
     STA $14
     LDA #>ITERATIONS
     STA $15
+    LDX CURRPIC
     JSR MATRIX_MAIN
     LDA #0
-    STA 198
+    STA 198  ; clear keyboard buffer
     JMP BEGIN
 
     ; the actual matrix rain code
