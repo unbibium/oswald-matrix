@@ -1,0 +1,59 @@
+ processor 6502
+
+ITERATIONS equ 999
+MAXPIC equ 3
+SCRMEM equ $0400
+SPRITEDATA equ $2000
+
+NOBASIC equ 1
+
+ org $0801
+.code
+        ; sys2061
+        .word BASICEND ; end of basic
+        .word 10  ; line number
+        .byte $9E ; SYS token
+        .byte $30 + (BEGIN % 10000)/1000
+        .byte $30 + (BEGIN % 1000)/100
+        .byte $30 + (BEGIN % 100)/10
+        .byte $30 + (BEGIN % 10)
+        ; now I can put stuff here
+        .byte 0
+BASICEND: .byte 0,0
+
+CURRPIC .byte 0
+
+BEGIN:   
+
+    DEC CURRPIC
+    BPL DUH
+    LDA #MAXPIC
+    STA CURRPIC
+DUH:
+    LDA CURRPIC
+    CLC
+    ADC #(SPRITEDATA & $3C00) >> 10
+    ASL
+    ASL
+    ASL
+    ASL
+    STA $12
+    LDA #<ITERATIONS
+    STA $14
+    LDA #>ITERATIONS
+    STA $15
+    JSR MATRIX_MAIN
+    LDA #0
+    STA 198
+    JMP BEGIN
+    
+    
+    rts
+
+
+    include matrix.a65
+
+    org SPRITEDATA
+    incbin images.bin
+
+
