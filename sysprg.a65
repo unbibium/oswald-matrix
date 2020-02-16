@@ -1,15 +1,29 @@
+;
+; This is the main source file for a stand-alone traditional
+; demo that you load into BASIC memory and RUN it.
+;
+
  processor 6502
 
+; constants
+; number of frames of animation to generate
 ITERATIONS equ 999
+; maximum pic number
 MAXPIC equ 3
+
+; i'd like to have put SPRITEDATA at $1000, but when I do
+; that, the VIC chip loads the charset ROM.  and I can't
+; turn off the charset ROM because I'm using it for the
+; foreground animation.
 SCRMEM equ $0400
 SPRITEDATA equ $2000
 
+; this causes matrix.a65 to leave out the part that
+; allows us to put parameters into the SYS command.
 NOBASIC equ 1
 
  org $0801
 .code
-        ; sys2061
         .word BASICEND ; end of basic
         .word 10  ; line number
         .byte $9E ; SYS token
@@ -17,7 +31,9 @@ NOBASIC equ 1
         .byte $30 + (BEGIN % 1000)/100
         .byte $30 + (BEGIN % 100)/10
         .byte $30 + (BEGIN % 10)
-        ; now I can put stuff here
+        ; now I could a variable length string here
+        ; but i'm crunching it so nobody will see it
+        ;.byte $20,$55,$4e,$42,$49,$42,$49,$55,$4D; " UNBIBIUM"
         .byte 0
 BASICEND: .byte 0,0
 
@@ -31,6 +47,8 @@ BEGIN:
     STA CURRPIC
 DUH:
     LDA CURRPIC
+    ; TODO: the math to integrate SPRITEDATA
+    ; into the parameter should be in matrix.a65
     CLC
     ADC #(SPRITEDATA & $3C00) >> 10
     ASL
@@ -46,12 +64,10 @@ DUH:
     LDA #0
     STA 198
     JMP BEGIN
-    
-    
-    rts
 
-
+    ; the actual matrix rain code
     include matrix.a65
+    echo "end of code:", .
 
     org SPRITEDATA
     incbin images.bin

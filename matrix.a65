@@ -3,37 +3,56 @@
 ; This is supposed to generate a Matrix code rain effect
 ; with a large sprite array in the foreground.
 ;
-; It is designed to be controlled from BASIC with parameters.
-; for example, to run 500 iterations with sprite 2:
+; There is a BASIC interface that allows you to pass parameters
+; through a SYS command.  
+; For example, to run 500 iterations with sprite 2:
 ; SYS 49152,500,2
+; Set NOBASIC to 1 if you don't need this code.
 ;
-; the arcane method of performing the row multiplication is
+; You must set SCRMEM to the 4K block of memory that
+; can be used to show the foreground animation.
+; You must set SPRITEDATA to the 4K block of memory
+; that contains images.bin.
+; These should all be in the same 16K quadrant of the
+; C64's memory.
+;
+; The arcane method of performing the row multiplication is
 ; left over from a version that supported the VIC-20.
 
 mscr = $FB
 mcolor = $FD
+SPRNUM = $12
+LINNUM = $14
 
 SPRITECOLOR = 0
 BGCOLOR = 11
 WIDTH = 40
 HEIGHT = 25
 PAGES = 4
+
 COLMEM = $D800
 SPRPTR = SCRMEM + $03F8
 
-; BASIC routines to get SYS parameter
-CHKCOM = $AEFD
-GETNUM = $AD8A 
-TOINT = $B7F7   ; Convert FAC#1 to Integer in LINNUM
-; result of SYS parameter
-LINNUM = $14
-GETBYT = $B79E
-SPRNUM = $12
-
-; root of sprite data for
-SPRPTR = SCRMEM + $03F8
-   
 SPRITEROOT = (SPRITEDATA & $3FC0) >> 6
+
+; Sanity checks
+    IF (SPRITEDATA & $C000) != (SCRMEM & $C000)
+        ECHO "SPRITEDATA and SCRMEM must be in the same 16K quadrant"
+        ECHO "so the VIC-II can see both at the same time."
+        ERR
+    ENDIF
+    ; check that sprite data doesn't stray into charset ROM block
+    ; TODO: put in arcane math that still works if I put in 8
+    ; background frames instead of 4.
+    IF (SPRITEDATA & $3FFF) <= $1000
+        ECHO "SPRITEDATA conflicts with the charset ROM"
+        ERR
+    ENDIF
+    IF (SCRMEM & $03FF) != 0
+        echo "SCRMEM not on a 1k boundary:", SCRMEM
+        ERR
+    ENDIF
+
 
   MAC NEXTRASTER
   LDA #{2}  ; scanline number
@@ -45,25 +64,33 @@ SPRITEROOT = (SPRITEDATA & $3FC0) >> 6
   ENDM
 
 
+;
+; SYS entry point with BASIC parameters
+; 
     IFNCONST NOBASIC
-; Matrix rain entry point from BASIC
+
+CHKCOM = $AEFD
+GETNUM = $AD8A 
+TOINT = $B7F7   ; Convert FAC#1 to Integer in LINNUM
+GETBYT = $B79E
+
 MATRIX_INIT:
     echo "MATRIX = SYS", [.]d, ",I,P"
 
 ; get iteration count from BASIC command
-    JSR CHKCOM
-    JSR GETNUM
-    JSR TOINT
-    JSR CHKCOM
-    JSR GETBYT
+    JSR CHKCOM  ; get comma after start address
+    JSR GETNUM  ; get numeric expression after comma
+    JSR TOINT   ; convert it to an integer in LINNUM
+    JSR CHKCOM  ; get comma after first arg
+    JSR GETBYT  ; get numeric expression in byte form in X
     TXA
-    EOR #$FF  ; start counting from end of memory
+    CLC
+    ADC #(SPRITEDATA & $3C00) >> 10
     ASL
     ASL
     ASL
     ASL
     STA SPRNUM
-    STA $0400
     JSR MATRIX_MAIN
 
     LDA #0
@@ -79,21 +106,18 @@ MATRIX_INIT:
     RTS
     ENDIF
 
+;
+;
+;
 MATRIX_MAIN:
 ; turn screen black
-    lda #11 ;dk grey
+    lda #BGCOLOR
     sta 646 ;text color
     sta $d021 ; for some kernels
+    sta $d020
     lda #147 ;clear screen
     jsr $FFD2 ; chrout
-    lda #BGCOLOR
-    sta $d020
-    sta $d021
 ; adjust screen memory if necessary
-  IF (SCRMEM & $03FF) != 0
-    echo "SCRMEM not on a 1k boundary:", SCRMEM
-    ERR
-  ENDIF
   IF SCRMEM > $3FFF
     LDA #(>SCRMEM ^ $C0) >> 6 | 148
     STA $DD00
