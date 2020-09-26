@@ -19,5 +19,5 @@ images.bin: make-sprites.py $(PBMS)
 	./make-sprites.py ${PBMS}
 
 clean:
-	rm matrix-49152.prg images.bin oswald-matrix.prg
+	rm comp.prg matrix-49152.prg images.bin oswald-matrix.prg *.sym *.lst
 
