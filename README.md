@@ -30,6 +30,9 @@ Run `make` and it will create the following files:
 * `comp.prg`: A standard demo that runs with SYS 12288.
 * `matrix-49152.prg`: some ML routines designed for BASIC integration.
 
+I've attached a BASIC program `cpunk.prg` which will use `matrix-49152.prg`
+to both run the Matrix animation, and draw large text.
+
 BASIC integration version
 =========================
 
@@ -37,28 +40,33 @@ You can load this into your BASIC program the usual way.
 
     10 IF A=0 THEN A=1:LOAD "MATRIX-49152",8,1
 
+You will note that the included `cpunk.prg` demo uses PEEKs instead.
+This is a holdover from when I was developing on a real c64 and didn't
+want to deal with reloading constantly.
+
 If you load it into immediate mode, remember to type `NEW` so that
 you don't get `?OUT OF MEMORY  ERROR`.
 
     SYS 49152,999,3
 
-the second number is the number of iterations before it quits
-the third number is the picture number (0 through 3)
+The second number is the number of iterations before it quits.
+The third number is the picture number (0 through 3).
 
-There is also a version of the Screen Headliner program, from
-Compute's Gazette around 1985.  It allows you to display large
-text on the screen with PETSCII.  The original version worked
-with POKEs and would output only one character at a time, and
-you couldn't draw a character on the right edge of the screen.
-I added some BASIC parsing to allow you to call it like this:
+This build also includes a version of the Screen Headliner program,
+from Compute's Gazette around 1985.  It allows you to display large
+text on the screen with PETSCII.  I fixed a bug so that you can
+use the entire width of the screen, up to 10 characters.  The 
+original version passed parameters with POKEs, and would output only 
+one character at a time, so I added some BASIC parsing to allow you 
+to call it like this:
 
-    SYS 50000,"HEADLINE",4
+    SYS 50000,4,"HEADLINE"
 
 The number at the end is the starting X position at the cursor.
 The range is 0 to 36, so you can center a 9-character string
 like this:
 
-    SYS 50000,"CYBERPUNK",2
+    SYS 50000,2,"CYBERPUNK"
 
 Notes
 =====
@@ -82,7 +90,9 @@ None of these worked.
 
 So I wrote `compactable.a65` which had no empty space but started
 with SYS 12288.  I thought I could compact that and set `$3000`
-as the start.  but that still doesn't work.
+as the start.  This worked when I specified "SEI" instead of "CLI"
+to the compactor.  I figured this out too late to upload it to
+Afterlife, though.
 
 Another known issue is that it seems that randomly the sprites 
 glitch out and flicker the wrong graphics.  I have no idea.

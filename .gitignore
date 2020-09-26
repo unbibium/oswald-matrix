@@ -1,6 +1,7 @@
 *~
-*.prg
-bitmaps.a65
+oswald-matrix.prg
+matrix-49152.prg
+comp.prg
 *.d64
 images.bin
 *.sym
