@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 
+"""
+This is an I/O library to read an old-fashioned portable bitmap
+(PBM) file and make sure that it can be converted into a
+sprite tile.
+"""
+
 def readpbm(fn):
+    "readpbm(fn) -> 1008 bytes of bitmap"
     with open(fn,'rb') as f:
         magicnum = (f.read(3))
         if magicnum != b'P4\n':

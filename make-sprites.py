@@ -1,42 +1,44 @@
 #!/usr/bin/env python3
 
-# generates 6 big sprite meshes, each consisting of 12 sprites
+# generates some big sprite meshes, each consisting of 12 sprites
 
 import sys
+import argparse
 
 from readpbm import readpbm
 
 # hex digits for debugging
-digits = list(map(bytes,[
-        (0x3C,0x66,0x6E,0x76,0x66,0x66,0x3c,0x00),
-        (0x18,0x18,0x38,0x18,0x18,0x18,0x7E,0x00),
-        (0x3C,0x66,0x06,0x0C,0x30,0x60,0x7E,0x00),
-        (0x3c,0x66,0x06,0x3c,0x06,0x66,0x3c,0x00),
-        (0x0c,0x1c,0x3c,0x6c,0x7E,0x0c,0x0c,0x00),
-        (0x7E,0x60,0x7C,0x06,0x06,0x66,0x3c,0x00),
-        (0x3c,0x66,0x60,0x7c,0x66,0x66,0x3c,0x00),
-        (0x7E,0x06,0x0c,0x18,0x30,0x60,0x60,0x00),
-        (0x3c,0x66,0x66,0x3c,0x66,0x66,0x3c,0x00),
-        (0x3c,0x66,0x66,0x3e,0x06,0x66,0x3c,0x00),
-        (0x18,0x3c,0x66,0x7e,0x66,0x66,0x66,0x00),
-        (0x7c,0x66,0x66,0x7c,0x66,0x66,0x7c,0x00),
-        (0x3c,0x66,0x60,0x60,0x60,0x66,0x3c,0x00),
-        (0x78,0x6c,0x66,0x66,0x66,0x6c,0x78,0x00),
-        (0x7E,0x60,0x60,0x7C,0x60,0x60,0x7E,0x00),
-        (0x7E,0x60,0x60,0x7C,0x60,0x60,0x60,0x00)
+digits = list(map(bytes.fromhex,[
+        "3C666E7666663c",
+        "1818381818187E",
+        "3C66060C30607E",
+        "3c66063c06663c",
+        "0c1c3c6c7E0c0c",
+        "7E607C0606663c",
+        "3c66607c66663c",
+        "7E060c18306060",
+        "3c66663c66663c",
+        "3c66663e06663c",
+        "183c667e666666",
+        "7c66667c66667c",
+        "3c66606060663c",
+        "786c6666666c78",
+        "7E60607C60607E",
+        "7E60607C606060"
         ]))
 
-def sprite(num):
-    "returns a sprite displaying the number in hex"
+def hexSprite(num):
+    "hexSprite(num) -> 64-byte object for a sprite displaying num in hex"
     left=int(num/16) & 0x0F
     right=num & 0x0F
     if num > 256:
-        raise ValueError("sprite(%d > 256)" % num)
+        raise ValueError("hexSprite(%d > 256)" % num)
     result = [0] * 64
     for i in range(7):
         result[i*3  ]=digits[0][i]
         result[i*3+1]=digits[left][i]
         result[i*3+2]=digits[right][i]
+	# checkerboard pattern at bottom
         result[62-i*3] = 85 << (i&1)
     return bytes(result)
 
@@ -51,17 +53,20 @@ def printsprite(data):
     return data
 
 def segment(pbmdata,segx,segy,width):
+    "segment(pbmdata,segx,segy,width) -> 64-byte object representing a chunk of the PBM data."
     bytewidth = int(width/8)
     result=[]
     offset=segy*21*bytewidth + segx*3
     for row in range(21):
         rowoffset = offset+row*bytewidth
         result.append(pbmdata[rowoffset:rowoffset+3])
+    if args.print: 
+        return printsprite(b''.join(result) + b'\0')
     return b''.join(result) + b'\0' # pad out to 64 bytes
-    #return printsprite(b''.join(result) + b'\0')
 
 
 def pbmtosprite(fn):
+    "pbmtosprite(filename) -> bytes object with C64-compatible sprites"
     b = readpbm(fn)
     sprites = []
     h,w=84,96
@@ -70,24 +75,22 @@ def pbmtosprite(fn):
             sprites.append(segment(b,x,y,w))
     return b''.join(sprites)
 
-        
+parser = argparse.ArgumentParser()
+parser.add_argument("--numbers", type=int, help="output n sprites containing index numbers in hex")
+parser.add_argument("--print", action="store_true", help="print sprites graphically to stdout")
+parser.add_argument("--output", help="output filename", default="images.bin")
+parser.add_argument("pbmfile", nargs="*", type=str, help="input filenames")
+args = parser.parse_args()
 
-
-#if len(sys.argv) == 0:
-    with open("images.bin",'wb') as f:
-        for i in range(48):
-            f.write(sprite(i))
-
-if len(sys.argv) == 1:
-    scriptname = sys.argv[0]
-    print("Usage: %s [filenames]  convert pbm files to sprites" % scriptname)
-    print("       %s -d           create debug sprites" % scriptname)
-elif len(sys.argv) == 2 and sys.argv[1] == '-d':
-    with open("images.bin",'wb') as f:
-        for i in range(48):
-            f.write(sprite(i))
-else: # do real conversion
-    with open("images.bin",'wb') as f:
-        for fn in sys.argv[1:]:
+if args.pbmfile:
+    with open(args.output,'wb') as f:
+        for fn in args.pbmfile:
             f.write(pbmtosprite(fn))
+elif args.numbers:
+    with open(args.output,'wb') as f:
+        for i in range(args.numbers):
+            f.write(hexSprite(i))
+else:
+    parser.print_usage()
+    sys.exit()
 
