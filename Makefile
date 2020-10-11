@@ -1,5 +1,6 @@
 DASM=dasm
 PBMS=oswald1.pbm oswald2.pbm oswald3.pbm oswald4.pbm
+IMAGEBIN=images.bin
 
 all: matrix-49152.prg oswald-matrix.prg compactable.prg
 
@@ -15,8 +16,8 @@ oswald-matrix.prg: sysprg.a65 mlloop.a65 matrix.a65 images.bin
 compactable.prg: compactable.a65 mlloop.a65 matrix.a65 images.bin
 	$(DASM) compactable.a65 -ocomp.prg -scomp.sym -lcomp.lst
 
-images.bin: make-sprites.py $(PBMS)
-	./make-sprites.py ${PBMS}
+images.bin: make-sprites.py readpbm.py $(PBMS)
+	./make-sprites.py ${PBMS} --output ${IMAGEBIN}
 
 clean:
 	rm comp.prg matrix-49152.prg images.bin oswald-matrix.prg *.sym *.lst

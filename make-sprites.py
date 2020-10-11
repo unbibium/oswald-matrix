@@ -3,9 +3,10 @@
 # generates some big sprite meshes, each consisting of 12 sprites
 
 import sys
+import math
 import argparse
 
-from readpbm import readpbm
+from readpbm import *
 
 # hex digits for debugging
 digits = list(map(bytes.fromhex,[
@@ -52,41 +53,29 @@ def printsprite(data):
         print("{:8b}{:8b}{:8b}".format(data[i],data[i+1],data[i+2]).replace('0',' '))
     return data
 
-def segment(pbmdata,segx,segy,width=24,height=21):
-    "segment(pbmdata,segx,segy,width,height) -> 64-byte object representing a chunk of the PBM data."
-    bytewidth = int(width/8)
-    result=bytearray(64)
-    offset=segy*21*bytewidth + segx*3
-    for row in range(21):
-        rowoffset = offset+row*bytewidth
-        resultoffset = row*3
-        result[resultoffset:resultoffset+3] = pbmdata[rowoffset:rowoffset+3]
-    if args.print: 
-        return printsprite(result)
-    return result
-
-def pbmtosprite(fn):
-    "pbmtosprite(filename) -> bytes object with C64-compatible sprites"
-    b = readpbm(fn)
-    sprites = []
-    h,w=84,96
-    for y in range(int(h/21)):
-        for x in range(int(w/24)):
-            sprites.append(segment(b,x,y,w))
-    return b''.join(sprites)
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--numbers", type=int, help="output n sprites containing index numbers in hex")
     parser.add_argument("--print", action="store_true", help="print sprites graphically to stdout")
-    parser.add_argument("--output", help="output filename", default="images.bin")
+    parser.add_argument("--output", type=str, default="images.bin", help="output filename for C64 sprites")
+    parser.add_argument("--format", type=str, default="sprite", help="output format (sprite, 8x16, 8x8")
     parser.add_argument("pbmfile", nargs="*", type=str, help="input filenames")
     args = parser.parse_args()
     
+    formats = {
+            'sprite': (24, 21),
+            '8x8':    (8, 8),
+            '8x16':   (8, 16)
+            }
     if args.pbmfile:
+        if args.format in formats:
+            w,h=formats[args.format]
+        else:
+            print("needs one output parameter")
+            sys.exit(2)
         with open(args.output,'wb') as f:
             for fn in args.pbmfile:
-                f.write(pbmtosprite(fn))
+                f.write(PBM(fn).all_segments(w,h))
     elif args.numbers:
         with open(args.output,'wb') as f:
             for i in range(args.numbers):
@@ -95,4 +84,5 @@ if __name__ == '__main__':
         parser.print_usage()
         sys.exit()
 
-# vim: tabstop=4 expandtab ai
+
+
