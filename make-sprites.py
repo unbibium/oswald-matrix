@@ -33,17 +33,17 @@ def hexSprite(num):
     right=num & 0x0F
     if num > 256:
         raise ValueError("hexSprite(%d > 256)" % num)
-    result = [0] * 64
+    result = bytearray(64)
     for i in range(7):
         result[i*3  ]=digits[0][i]
         result[i*3+1]=digits[left][i]
         result[i*3+2]=digits[right][i]
-	# checkerboard pattern at bottom
+        # checkerboard pattern at bottom
         result[62-i*3] = 85 << (i&1)
     return bytes(result)
 
 def printsprite(data):
-    if type(data) != bytes:
+    if type(data) not in (bytes, bytearray):
         raise ValueError("expected bytes, was %s" % type(data))
     if len(data) != 64:
         raise ValueError("expected 64 bytes, was %d" % len(data))
@@ -52,18 +52,18 @@ def printsprite(data):
         print("{:8b}{:8b}{:8b}".format(data[i],data[i+1],data[i+2]).replace('0',' '))
     return data
 
-def segment(pbmdata,segx,segy,width):
-    "segment(pbmdata,segx,segy,width) -> 64-byte object representing a chunk of the PBM data."
+def segment(pbmdata,segx,segy,width=24,height=21):
+    "segment(pbmdata,segx,segy,width,height) -> 64-byte object representing a chunk of the PBM data."
     bytewidth = int(width/8)
-    result=[]
+    result=bytearray(64)
     offset=segy*21*bytewidth + segx*3
     for row in range(21):
         rowoffset = offset+row*bytewidth
-        result.append(pbmdata[rowoffset:rowoffset+3])
+        resultoffset = row*3
+        result[resultoffset:resultoffset+3] = pbmdata[rowoffset:rowoffset+3]
     if args.print: 
-        return printsprite(b''.join(result) + b'\0')
-    return b''.join(result) + b'\0' # pad out to 64 bytes
-
+        return printsprite(result)
+    return result
 
 def pbmtosprite(fn):
     "pbmtosprite(filename) -> bytes object with C64-compatible sprites"
@@ -75,22 +75,24 @@ def pbmtosprite(fn):
             sprites.append(segment(b,x,y,w))
     return b''.join(sprites)
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--numbers", type=int, help="output n sprites containing index numbers in hex")
-parser.add_argument("--print", action="store_true", help="print sprites graphically to stdout")
-parser.add_argument("--output", help="output filename", default="images.bin")
-parser.add_argument("pbmfile", nargs="*", type=str, help="input filenames")
-args = parser.parse_args()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--numbers", type=int, help="output n sprites containing index numbers in hex")
+    parser.add_argument("--print", action="store_true", help="print sprites graphically to stdout")
+    parser.add_argument("--output", help="output filename", default="images.bin")
+    parser.add_argument("pbmfile", nargs="*", type=str, help="input filenames")
+    args = parser.parse_args()
+    
+    if args.pbmfile:
+        with open(args.output,'wb') as f:
+            for fn in args.pbmfile:
+                f.write(pbmtosprite(fn))
+    elif args.numbers:
+        with open(args.output,'wb') as f:
+            for i in range(args.numbers):
+                f.write(hexSprite(i))
+    else:
+        parser.print_usage()
+        sys.exit()
 
-if args.pbmfile:
-    with open(args.output,'wb') as f:
-        for fn in args.pbmfile:
-            f.write(pbmtosprite(fn))
-elif args.numbers:
-    with open(args.output,'wb') as f:
-        for i in range(args.numbers):
-            f.write(hexSprite(i))
-else:
-    parser.print_usage()
-    sys.exit()
-
+# vim: tabstop=4 expandtab ai
