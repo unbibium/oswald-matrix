@@ -71,7 +71,7 @@ if __name__ == '__main__':
         if args.format in formats:
             w,h=formats[args.format]
         else:
-            print("needs one output parameter")
+            print("unrecognized format: ", args.format)
             sys.exit(2)
         with open(args.output,'wb') as f:
             for fn in args.pbmfile:
